@@ -3,8 +3,7 @@ const { google } = require("googleapis");
 const moment = require("moment");
 
 // 初始化 Firebase
-const firebaseDecoded = Buffer.from(process.env.FIREBASE_CREDENTIAL_BASE64, "base64").toString();
-const firebaseServiceAccount = JSON.parse(firebaseDecoded);
+const firebaseServiceAccount = JSON.parse(process.env.FIREBASE_CREDENTIAL);
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(firebaseServiceAccount),
@@ -14,8 +13,7 @@ if (!admin.apps.length) {
 const db = admin.database();
 
 // 初始化 Google Sheets
-const sheetDecoded = Buffer.from(process.env.SHEET_CREDENTIAL_BASE64, "base64").toString();
-const sheetServiceAccount = JSON.parse(sheetDecoded);
+const sheetServiceAccount = JSON.parse(process.env.SHEET_CREDENTIAL);
 const jwt = new google.auth.JWT(
   sheetServiceAccount.client_email,
   null,
