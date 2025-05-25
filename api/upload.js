@@ -7,7 +7,7 @@ const firebaseServiceAccount = JSON.parse(process.env.FIREBASE_CREDENTIAL);
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(firebaseServiceAccount),
-    databaseURL: "https://iot-monitor-50d03.firebaseio.com"
+    databaseURL: "https://iot-monitor-50d03-default-rtdb.asia-southeast1.firebasedatabase.app"
   });
 }
 const db = admin.database();
