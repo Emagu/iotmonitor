@@ -36,7 +36,6 @@ export default async function handler(req, res) {
 
     try {
         const setting = await getSetting(deviceId);
-        console.log(setting);
         // 初始化 Firebase
         const firebaseServiceAccount = JSON.parse(process.env.FIREBASE_CREDENTIAL);
         if (!admin.apps.length) {
@@ -45,14 +44,12 @@ export default async function handler(req, res) {
                 databaseURL: "https://iot-monitor-50d03-default-rtdb.asia-southeast1.firebasedatabase.app"
             });
         }
-		console.log(1);
         const db = admin.database();
         await db.ref(`/devices/${deviceId}/lastData`).set({
             temperature,
             light,
             timestamp
         });
-        console.log(2);
         const recordTime = new Date(timestamp);
         const sheetName = utils.GetDateFormat(recordTime);
 
@@ -62,9 +59,7 @@ export default async function handler(req, res) {
             auth
         });
         
-        console.log(3);
         await utils.ensureSheetExists(sheets, setting.DataSheetFileId, sheetName);
-        console.log(4);
         await sheets.spreadsheets.values.append({
             spreadsheetId: setting.DataSheetFileId,
             range: `${sheetName}!A:D`,
