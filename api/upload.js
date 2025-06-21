@@ -34,14 +34,7 @@ export default async function handler(req, res) {
         }
         const db = admin.database();
         
-        // 保存最新数据到Firebase
-        await db.ref(`/devices/${deviceId}/lastData`).set({
-            temperature,
-            light,
-            timestamp
-        });
-
-        // 添加数据到待处理队列
+        // 准备数据
         const recordTime = new Date(timestamp);
         const queueData = {
             deviceId,
@@ -53,7 +46,17 @@ export default async function handler(req, res) {
             createdAt: Date.now()
         };
 
-        await db.ref(`/dataQueue/${deviceId}/${Date.now()}`).set(queueData);
+        // 使用批量操作同时更新两个位置
+        const updates = {};
+        updates[`/devices/${deviceId}/lastData`] = {
+            temperature,
+            light,
+            timestamp
+        };
+        updates[`/dataQueue/${deviceId}/${Date.now()}`] = queueData;
+
+        // 批量写入，减少数据库请求次数
+        await db.ref().update(updates);
 
         res.status(200).send("Data uploaded");
     } catch (error) {

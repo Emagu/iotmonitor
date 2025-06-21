@@ -42,13 +42,16 @@ export default async function handler(req, res) {
             deviceGroups[deviceId] = Object.values(queueData[deviceId]);
         }
 
-        // 批量处理每个设备的数据
+        // 并发处理每个设备的数据
         const auth = getGoogleAuth();
         const sheets = google.sheets({ version: "v4", auth });
 
-        for (const deviceId in deviceGroups) {
-            await processDeviceData(sheets, deviceId, deviceGroups[deviceId], db);
-        }
+        // 使用 Promise.all 并发处理多个设备
+        const devicePromises = Object.keys(deviceGroups).map(deviceId => 
+            processDeviceData(sheets, deviceId, deviceGroups[deviceId], db)
+        );
+
+        await Promise.all(devicePromises);
 
         res.status(200).send("Sync completed");
     } catch (error) {
@@ -63,6 +66,8 @@ async function processDeviceData(sheets, deviceId, dataList, db) {
         const setting = await getSetting(deviceId);
         if (!setting.DataSheetFileId) {
             console.warn(`No sheet ID configured for device ${deviceId}`);
+            // 即使没有配置，也要清除队列数据避免堆积
+            await db.ref(`/dataQueue/${deviceId}`).remove();
             return;
         }
 
@@ -76,10 +81,12 @@ async function processDeviceData(sheets, deviceId, dataList, db) {
             dateGroups[dateKey].push(data);
         });
 
-        // 处理每个日期的数据
-        for (const dateKey in dateGroups) {
-            await processDateData(sheets, setting.DataSheetFileId, dateKey, dateGroups[dateKey]);
-        }
+        // 并发处理每个日期的数据
+        const datePromises = Object.keys(dateGroups).map(dateKey => 
+            processDateData(sheets, setting.DataSheetFileId, dateKey, dateGroups[dateKey])
+        );
+
+        await Promise.all(datePromises);
 
         // 清除已处理的数据
         await db.ref(`/dataQueue/${deviceId}`).remove();
@@ -87,6 +94,8 @@ async function processDeviceData(sheets, deviceId, dataList, db) {
         console.log(`Processed ${dataList.length} records for device ${deviceId}`);
     } catch (error) {
         console.error(`Error processing device ${deviceId}:`, error);
+        // 错误时不删除队列数据，保留重试机会
+        throw error;
     }
 }
 

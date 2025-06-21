@@ -2,8 +2,12 @@
   "version": 2,
   "functions": {
     "api/upload.js": {
-      "memory": 128,
-      "maxDuration": 10
+      "memory": 256,
+      "maxDuration": 20
+    },
+    "api/syncToSheets.js": {
+      "memory": 512,
+      "maxDuration": 300
     }
   }
 }
