@@ -38,7 +38,6 @@ export default async function handler(req, res) {
         const setting = await getSetting(deviceId);
         // 初始化 Firebase
         const firebaseServiceAccount = JSON.parse(process.env.FIREBASE_CREDENTIAL);
-		console.log(firebaseServiceAccount);
         if (!admin.apps.length) {
             admin.initializeApp({
                 credential: admin.credential.cert(firebaseServiceAccount),
@@ -52,20 +51,19 @@ export default async function handler(req, res) {
             light,
             timestamp
         });
-
+        console.log(2);
         const recordTime = new Date(timestamp);
         const sheetName = utils.GetDateFormat(recordTime);
 
-        const auth = getGoogleAuth([
-            "https://www.googleapis.com/auth/spreadsheets"
-        ]);
+        const auth = getGoogleAuth();
         const sheets = google.sheets({
             version: "v4",
             auth
         });
 
+        console.log(3);
         await utils.ensureSheetExists(sheets, setting.DataSheetFileId, sheetName);
-
+        console.log(4);
         await sheets.spreadsheets.values.append({
             spreadsheetId: setting.DataSheetFileId,
             range: `${sheetName}!A:D`,
