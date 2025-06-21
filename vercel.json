@@ -7,7 +7,7 @@
     },
     "api/syncToSheets.js": {
       "memory": 512,
-      "maxDuration": 300
+      "maxDuration": 60
     }
   }
 }
