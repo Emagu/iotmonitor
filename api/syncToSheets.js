@@ -123,9 +123,21 @@ async function updateStats(devicesData, db, queueData) {
                 // 計算統計數據
                 const stats = calculateStats(recentData);
                 
-                // 準備更新
+                // 獲取設備設置以獲取 FactoryName
+                let factoryName = deviceId; // 默認使用設備ID
+                try {
+                    const setting = await getSetting(deviceId);
+                    if (setting && setting.FactoryName) {
+                        factoryName = setting.FactoryName;
+                    }
+                } catch (error) {
+                    console.warn(`Failed to get setting for device ${deviceId}:`, error);
+                }
+                
+                // 準備更新，包含 FactoryName
                 updates[`/devices/${deviceId}/stats`] = {
                     ...stats,
+                    factoryName: factoryName,
                     lastUpdated: Date.now()
                 };
 

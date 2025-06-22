@@ -291,9 +291,12 @@
             const now = Date.now();
             const isOnline = lastData.timestamp && (now - lastData.timestamp) < 60000; // 1分鐘內為在線
 
+            // 使用 stats 中的 factoryName，如果沒有則使用設備ID
+            const displayName = stats.factoryName || deviceId;
+
             card.innerHTML = `
                 <div class="device-header">
-                    <div class="device-id">📱 ${deviceId}</div>
+                    <div class="device-id">📱 ${displayName}</div>
                     <div class="device-status ${isOnline ? 'status-online' : 'status-offline'}">
                         ${isOnline ? '🟢 在線' : '🔴 離線'}
                     </div>
