@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT 設備監控系統</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .refresh-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .refresh-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .devices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .device-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .device-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .device-id {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .device-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .status-online {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .current-data {
+            margin-bottom: 25px;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .data-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .data-value {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .temp-value {
+            color: #e74c3c;
+        }
+
+        .light-value {
+            color: #f39c12;
+        }
+
+        .stats-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .stats-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+            padding: 50px;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .no-devices {
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+            padding: 50px;
+        }
+
+        @media (max-width: 768px) {
+            .devices-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 IoT 設備監控系統</h1>
+            <p>即時監控所有設備狀態與數據統計</p>
+        </div>
+
+        <div style="text-align: center;">
+            <button class="refresh-btn" onclick="loadDevices()">
+                🔄 重新整理
+            </button>
+        </div>
+
+        <div id="content">
+            <div class="loading">載入中...</div>
+        </div>
+    </div>
+
+    <script>
+        // 載入設備數據
+        async function loadDevices() {
+            const contentDiv = document.getElementById('content');
+            contentDiv.innerHTML = '<div class="loading">載入中...</div>';
+
+            try {
+                const response = await fetch('/api/devices');
+                if (!response.ok) {
+                    throw new Error('無法載入設備數據');
+                }
+
+                const data = await response.json();
+                
+                if (!data.devices || Object.keys(data.devices).length === 0) {
+                    contentDiv.innerHTML = '<div class="no-devices">目前沒有設備數據</div>';
+                    return;
+                }
+
+                displayDevices(data.devices);
+            } catch (error) {
+                console.error('Error:', error);
+                contentDiv.innerHTML = `<div class="error">錯誤: ${error.message}</div>`;
+            }
+        }
+
+        // 顯示設備數據
+        function displayDevices(devices) {
+            const contentDiv = document.getElementById('content');
+            const devicesGrid = document.createElement('div');
+            devicesGrid.className = 'devices-grid';
+
+            Object.keys(devices).forEach(deviceId => {
+                const device = devices[deviceId];
+                const card = createDeviceCard(deviceId, device);
+                devicesGrid.appendChild(card);
+            });
+
+            contentDiv.innerHTML = '';
+            contentDiv.appendChild(devicesGrid);
+        }
+
+        // 創建設備卡片
+        function createDeviceCard(deviceId, device) {
+            const card = document.createElement('div');
+            card.className = 'device-card';
+
+            const lastData = device.lastData || {};
+            const stats = device.stats || {};
+            const now = Date.now();
+            const isOnline = lastData.timestamp && (now - lastData.timestamp) < 60000; // 1分鐘內為在線
+
+            card.innerHTML = `
+                <div class="device-header">
+                    <div class="device-id">📱 ${deviceId}</div>
+                    <div class="device-status ${isOnline ? 'status-online' : 'status-offline'}">
+                        ${isOnline ? '🟢 在線' : '🔴 離線'}
+                    </div>
+                </div>
+
+                <div class="current-data">
+                    <h3 style="margin-bottom: 15px; color: #333;">📊 即時數據</h3>
+                    <div class="data-row">
+                        <span class="data-label">溫度:</span>
+                        <span class="data-value temp-value">${lastData.temperature ? lastData.temperature + '°C' : '無數據'}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">光照:</span>
+                        <span class="data-value light-value">${lastData.light ? lastData.light + ' lux' : '無數據'}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">最後更新:</span>
+                        <span class="data-value">${lastData.timestamp ? formatTime(lastData.timestamp) : '無數據'}</span>
+                    </div>
+                </div>
+
+                <div class="stats-section">
+                    <div class="stats-title">📈 最近10分鐘統計</div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">平均溫度</div>
+                            <div class="stat-value temp-value">${stats.avgTemp ? stats.avgTemp.toFixed(1) + '°C' : '無數據'}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最高溫度</div>
+                            <div class="stat-value temp-value">${stats.maxTemp ? stats.maxTemp + '°C' : '無數據'}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最低溫度</div>
+                            <div class="stat-value temp-value">${stats.minTemp ? stats.minTemp + '°C' : '無數據'}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">平均光照</div>
+                            <div class="stat-value light-value">${stats.avgLight ? stats.avgLight.toFixed(0) + ' lux' : '無數據'}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最高光照</div>
+                            <div class="stat-value light-value">${stats.maxLight ? stats.maxLight + ' lux' : '無數據'}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最低光照</div>
+                            <div class="stat-value light-value">${stats.minLight ? stats.minLight + ' lux' : '無數據'}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        // 格式化時間
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleString('zh-TW', {
+                timeZone: 'Asia/Taipei',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        // 頁面載入時自動載入數據
+        document.addEventListener('DOMContentLoaded', loadDevices);
+
+        // 每30秒自動重新整理
+        setInterval(loadDevices, 30000);
+    </script>
+</body>
+</html> 

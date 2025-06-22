@@ -34,7 +34,7 @@ export default async function handler(req, res) {
         }
         const db = admin.database();
         
-        // 准备数据
+        // 準備數據
         const recordTime = new Date(timestamp);
         const queueData = {
             deviceId,
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
             createdAt: Date.now()
         };
 
-        // 使用批量操作同时更新两个位置
+        // 使用批量操作同時更新兩個位置
         const updates = {};
         updates[`/devices/${deviceId}/lastData`] = {
             temperature,
@@ -55,7 +55,7 @@ export default async function handler(req, res) {
         };
         updates[`/dataQueue/${deviceId}/${Date.now()}`] = queueData;
 
-        // 批量写入，减少数据库请求次数
+        // 批量寫入，減少數據庫請求次數
         await db.ref().update(updates);
 
         res.status(200).send("Data uploaded");

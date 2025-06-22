@@ -10,9 +10,9 @@ import {
 } from "../lib/settings.js";
 import * as utils from "../lib/Utils.js";
 
-// 定时任务处理函数
+// 定時任務處理函數 - 同步到Sheets並更新統計數據
 export default async function handler(req, res) {
-    // 验证定时任务密钥
+    // 驗證定時任務密鑰
     if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
         return res.status(401).send("Unauthorized");
     }
@@ -28,50 +28,118 @@ export default async function handler(req, res) {
         }
         const db = admin.database();
 
-        // 获取所有待处理数据
+        // 獲取所有待處理數據
         const queueSnapshot = await db.ref('/dataQueue').once('value');
         const queueData = queueSnapshot.val();
 
-        if (!queueData) {
-            return res.status(200).send("No data to sync");
+        // 獲取所有設備數據（用於統計）
+        const devicesSnapshot = await db.ref('/devices').once('value');
+        const devicesData = devicesSnapshot.val();
+
+        if (!queueData && !devicesData) {
+            return res.status(200).send("No data to process");
         }
 
-        // 按设备分组数据
+        // 並發執行同步和統計更新
+        const syncPromise = queueData ? syncToSheets(queueData, db) : Promise.resolve("No data to sync");
+        const statsPromise = devicesData ? updateStats(devicesData, db) : Promise.resolve("No devices to update");
+
+        const [syncResult, statsResult] = await Promise.all([syncPromise, statsPromise]);
+
+        console.log(`Sync: ${syncResult}, Stats: ${statsResult}`);
+        res.status(200).send(`Sync and stats update completed`);
+    } catch (error) {
+        console.error("Sync and stats error:", error);
+        res.status(500).send("Sync and stats failed");
+    }
+}
+
+// 同步到Google Sheets
+async function syncToSheets(queueData, db) {
+    try {
+        // 按設備分組數據
         const deviceGroups = {};
         for (const deviceId in queueData) {
             deviceGroups[deviceId] = Object.values(queueData[deviceId]);
         }
 
-        // 并发处理每个设备的数据
+        // 並發處理每個設備的數據
         const auth = getGoogleAuth();
         const sheets = google.sheets({ version: "v4", auth });
 
-        // 使用 Promise.all 并发处理多个设备
+        // 使用 Promise.all 並發處理多個設備
         const devicePromises = Object.keys(deviceGroups).map(deviceId => 
             processDeviceData(sheets, deviceId, deviceGroups[deviceId], db)
         );
 
         await Promise.all(devicePromises);
-
-        res.status(200).send("Sync completed");
+        return "Sync completed";
     } catch (error) {
         console.error("Sync error:", error);
-        res.status(500).send("Sync failed");
+        throw error;
     }
 }
 
-// 处理单个设备的数据
+// 更新統計數據
+async function updateStats(devicesData, db) {
+    try {
+        const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
+        const updates = {};
+
+        // 並發處理所有設備的統計數據
+        const updatePromises = Object.keys(devicesData).map(async (deviceId) => {
+            try {
+                // 獲取最近10分鐘的數據
+                const recentDataSnapshot = await db.ref('/dataQueue')
+                    .child(deviceId)
+                    .orderByChild('timestamp')
+                    .startAt(tenMinutesAgo)
+                    .once('value');
+                
+                const recentData = recentDataSnapshot.val();
+                
+                // 計算統計數據
+                const stats = calculateStats(recentData);
+                
+                // 準備更新
+                updates[`/devices/${deviceId}/stats`] = {
+                    ...stats,
+                    lastUpdated: Date.now()
+                };
+
+                console.log(`Updated stats for device ${deviceId}: ${stats.dataCount} records`);
+            } catch (error) {
+                console.error(`Error updating stats for device ${deviceId}:`, error);
+            }
+        });
+
+        await Promise.all(updatePromises);
+
+        // 批量更新所有統計數據
+        if (Object.keys(updates).length > 0) {
+            await db.ref().update(updates);
+            console.log(`Updated stats for ${Object.keys(updates).length} devices`);
+        }
+
+        return "Stats updated successfully";
+    } catch (error) {
+        console.error("Stats update error:", error);
+        throw error;
+    }
+}
+
+// 處理單個設備的數據
 async function processDeviceData(sheets, deviceId, dataList, db) {
     try {
         const setting = await getSetting(deviceId);
         if (!setting.DataSheetFileId) {
             console.warn(`No sheet ID configured for device ${deviceId}`);
-            // 即使没有配置，也要清除队列数据避免堆积
+            // 即使沒有配置，也要清除隊列數據避免堆積
             await db.ref(`/dataQueue/${deviceId}`).remove();
             return;
         }
 
-        // 按日期分组数据
+        // 按日期分組數據
         const dateGroups = {};
         dataList.forEach(data => {
             const dateKey = data.dateFormatted;
@@ -81,31 +149,31 @@ async function processDeviceData(sheets, deviceId, dataList, db) {
             dateGroups[dateKey].push(data);
         });
 
-        // 并发处理每个日期的数据
+        // 並發處理每個日期的數據
         const datePromises = Object.keys(dateGroups).map(dateKey => 
             processDateData(sheets, setting.DataSheetFileId, dateKey, dateGroups[dateKey])
         );
 
         await Promise.all(datePromises);
 
-        // 清除已处理的数据
+        // 清除已處理的數據
         await db.ref(`/dataQueue/${deviceId}`).remove();
         
         console.log(`Processed ${dataList.length} records for device ${deviceId}`);
     } catch (error) {
         console.error(`Error processing device ${deviceId}:`, error);
-        // 错误时不删除队列数据，保留重试机会
+        // 錯誤時不刪除隊列數據，保留重試機會
         throw error;
     }
 }
 
-// 处理单个日期的数据
+// 處理單個日期的數據
 async function processDateData(sheets, spreadsheetId, sheetName, dataList) {
     try {
-        // 确保工作表存在
+        // 確保工作表存在
         await utils.ensureSheetExists(sheets, spreadsheetId, sheetName);
 
-        // 准备批量数据
+        // 準備批量數據
         const values = dataList.map(data => [
             data.temperature,
             data.light,
@@ -113,7 +181,7 @@ async function processDateData(sheets, spreadsheetId, sheetName, dataList) {
             data.timestamp
         ]);
 
-        // 批量写入数据
+        // 批量寫入數據
         await sheets.spreadsheets.values.append({
             spreadsheetId,
             range: `${sheetName}!A:D`,
@@ -126,4 +194,45 @@ async function processDateData(sheets, spreadsheetId, sheetName, dataList) {
         console.error(`Error syncing to sheet ${sheetName}:`, error);
         throw error;
     }
+}
+
+// 計算統計數據
+function calculateStats(data) {
+    if (!data) {
+        return {
+            avgTemp: null,
+            maxTemp: null,
+            minTemp: null,
+            avgLight: null,
+            maxLight: null,
+            minLight: null,
+            dataCount: 0
+        };
+    }
+
+    const temperatures = [];
+    const lights = [];
+    
+    // 收集所有數據
+    Object.values(data).forEach(record => {
+        if (record.temperature !== undefined && record.temperature !== null) {
+            temperatures.push(parseFloat(record.temperature));
+        }
+        if (record.light !== undefined && record.light !== null) {
+            lights.push(parseFloat(record.light));
+        }
+    });
+
+    // 計算統計數據
+    const stats = {
+        avgTemp: temperatures.length > 0 ? temperatures.reduce((a, b) => a + b, 0) / temperatures.length : null,
+        maxTemp: temperatures.length > 0 ? Math.max(...temperatures) : null,
+        minTemp: temperatures.length > 0 ? Math.min(...temperatures) : null,
+        avgLight: lights.length > 0 ? lights.reduce((a, b) => a + b, 0) / lights.length : null,
+        maxLight: lights.length > 0 ? Math.max(...lights) : null,
+        minLight: lights.length > 0 ? Math.min(...lights) : null,
+        dataCount: Object.keys(data).length
+    };
+
+    return stats;
 } 
