@@ -69,8 +69,10 @@ async function checkDeviceStatus(deviceId, deviceData, oneMinuteAgo) {
         let alerts = [];
 
         // 檢查1: timestamp超過一分鐘
-        if (lastData.timestamp < oneMinuteAgo) {
-            const minutesAgo = Math.floor((Date.now() - lastData.timestamp) / (60 * 1000));
+        var timestamp = new Date(lastData.timestamp);
+        console.log(timestamp);
+        if (timestamp < oneMinuteAgo) {
+            const minutesAgo = Math.floor((Date.now() - timestamp) / (60 * 1000));
             alerts.push(`⚠️ **設備離線警報** - 設備 ${deviceId} (${setting.FactoryName}) 已離線 ${minutesAgo} 分鐘`);
         }
 
