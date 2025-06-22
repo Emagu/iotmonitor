@@ -40,17 +40,24 @@ export default async function handler(req, res) {
             return res.status(200).send("No data to process");
         }
 
-        // 並發執行同步和統計更新
-        const syncPromise = queueData ? syncToSheets(queueData, db) : Promise.resolve("No data to sync");
-        const statsPromise = devicesData ? updateStats(devicesData, db) : Promise.resolve("No devices to update");
+        let syncResult = "No data to sync";
+        let statsResult = "No devices to update";
 
-        const [syncResult, statsResult] = await Promise.all([syncPromise, statsPromise]);
+        // 先更新統計數據（在同步之前）
+        if (devicesData) {
+            statsResult = await updateStats(devicesData, db, queueData);
+        }
 
-        console.log(`Sync: ${syncResult}, Stats: ${statsResult}`);
-        res.status(200).send(`Sync and stats update completed`);
+        // 再進行數據同步（統計完成後）
+        if (queueData) {
+            syncResult = await syncToSheets(queueData, db);
+        }
+
+        console.log(`Stats: ${statsResult}, Sync: ${syncResult}`);
+        res.status(200).send(`Stats and sync completed`);
     } catch (error) {
-        console.error("Sync and stats error:", error);
-        res.status(500).send("Sync and stats failed");
+        console.error("Stats and sync error:", error);
+        res.status(500).send("Stats and sync failed");
     }
 }
 
@@ -81,7 +88,7 @@ async function syncToSheets(queueData, db) {
 }
 
 // 更新統計數據
-async function updateStats(devicesData, db) {
+async function updateStats(devicesData, db, queueData) {
     try {
         const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
         const updates = {};
@@ -89,14 +96,29 @@ async function updateStats(devicesData, db) {
         // 並發處理所有設備的統計數據
         const updatePromises = Object.keys(devicesData).map(async (deviceId) => {
             try {
-                // 獲取最近10分鐘的數據
-                const recentDataSnapshot = await db.ref('/dataQueue')
-                    .child(deviceId)
-                    .orderByChild('timestamp')
-                    .startAt(tenMinutesAgo)
-                    .once('value');
-                
-                const recentData = recentDataSnapshot.val();
+                let recentData = null;
+
+                // 如果有隊列數據，直接使用（避免重複查詢）
+                if (queueData && queueData[deviceId]) {
+                    const deviceQueueData = queueData[deviceId];
+                    // 過濾最近10分鐘的數據
+                    recentData = {};
+                    Object.keys(deviceQueueData).forEach(key => {
+                        const record = deviceQueueData[key];
+                        if (record.timestamp >= tenMinutesAgo) {
+                            recentData[key] = record;
+                        }
+                    });
+                } else {
+                    // 如果沒有隊列數據，從數據庫查詢
+                    const recentDataSnapshot = await db.ref('/dataQueue')
+                        .child(deviceId)
+                        .orderByChild('timestamp')
+                        .startAt(tenMinutesAgo)
+                        .once('value');
+                    
+                    recentData = recentDataSnapshot.val();
+                }
                 
                 // 計算統計數據
                 const stats = calculateStats(recentData);
