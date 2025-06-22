@@ -289,7 +289,7 @@
             const lastData = device.lastData || {};
             const stats = device.stats || {};
             const now = Date.now();
-            const isOnline = lastData.timestamp && (now - lastData.timestamp) < 60000; // 1分鐘內為在線
+            const isOnline = lastData.timestamp && (now - new Date(lastData.timestamp)) < 60000; // 1分鐘內為在線
 
             // 使用 stats 中的 factoryName，如果沒有則使用設備ID
             const displayName = stats.factoryName || deviceId;
