@@ -1,5 +1,3 @@
-import * as utils from '../lib/Utils.js'
-
 export async function handleUpload(request, env, ctx) {
   if (request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 })
@@ -16,43 +14,10 @@ export async function handleUpload(request, env, ctx) {
   }
 
   try {
-    // 準備數據
-    const recordTime = new Date(timestamp)
-    const queueData = {
-      deviceId,
-      temperature,
-      light,
-      timestamp: recordTime.getTime(),
-      timeFormatted: utils.GetTimeFormat(recordTime),
-      dateFormatted: utils.GetDateFormat(recordTime),
-      createdAt: Date.now()
-    }
-
-    // Firebase REST API URL
-    const dbUrl = "https://iot-monitor-50d03-default-rtdb.asia-southeast1.firebasedatabase.app"
-    const updates = {
-      [`/devices/${deviceId}/lastData`]: {
-        temperature,
-        light,
-        timestamp
-      },
-      [`/dataQueue/${deviceId}/${Date.now()}`]: queueData
-    }
-
-    // 批量寫入（REST API 沒有 update 多路徑，需多次請求或用自定義 Cloud Function）
-    // 這裡用 Promise.all 兩次 PATCH
-    await Promise.all([
-      fetch(`${dbUrl}/devices/${deviceId}/lastData.json?auth=${env.FIREBASE_DB_SECRET}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ temperature, light, timestamp })
-      }),
-      fetch(`${dbUrl}/dataQueue/${deviceId}/${Date.now()}.json?auth=${env.FIREBASE_DB_SECRET}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(queueData)
-      })
-    ])
+    // 寫入 D1 資料庫
+    await env.DB.prepare(
+      "INSERT INTO devices (device_id, temperature, light, post_at) VALUES (?, ?, ?, datetime(?, 'unixepoch'))"
+    ).bind(deviceId, temperature, light, timestamp).run();
 
     return new Response("Data uploaded", { status: 200 })
   } catch (error) {

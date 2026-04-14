@@ -1,3 +1,17 @@
 name = "iot-monitor"
 main = "worker/index.js"
 compatibility_date = "2025-06-27"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "monitor"
+database_id = "342bb711-e871-4e2e-b840-503b30630a77"
+remote = true
+
+[observability]
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[observability.traces]
+enabled = false
