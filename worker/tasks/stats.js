@@ -30,8 +30,8 @@ async function updateStats(env, settings, devicesData) {
         const stmt = env.DB.prepare(`
             INSERT INTO deviceStats (
                 device_id, avgTemp, maxTemp, minTemp, 
-                avgLight, maxLight, minLight, dataCount, modifyDate
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                avgLight, maxLight, minLight, dataCount, modifyDate, factoryName
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
             ON CONFLICT(device_id) DO UPDATE SET
                 avgTemp = excluded.avgTemp,
                 maxTemp = excluded.maxTemp,
@@ -40,10 +40,11 @@ async function updateStats(env, settings, devicesData) {
                 maxLight = excluded.maxLight,
                 minLight = excluded.minLight,
                 dataCount = excluded.dataCount,
-                modifyDate = CURRENT_TIMESTAMP
+                modifyDate = CURRENT_TIMESTAMP,
+                factoryName = excluded.factoryName
         `).bind(
             dId, stats.avgTemp, stats.maxTemp, stats.minTemp, 
-            stats.avgLight, stats.maxLight, stats.minLight, stats.dataCount
+            stats.avgLight, stats.maxLight, stats.minLight, stats.dataCount, device.factory_name
         );
         
         statements.push(stmt);
