@@ -15,3 +15,6 @@ invocation_logs = true
 
 [observability.traces]
 enabled = false
+
+[assets]
+directory = "./public"
