@@ -289,7 +289,7 @@
             const lastData = device.lastData || {};
             const stats = device.stats || {};
             const now = Date.now();
-            const isOnline = lastData.timestamp && (now - new Date(lastData.timestamp)) < 60000; // 1分鐘內為在線
+            const isOnline = lastData.post_at && (now - new Date(lastData.post_at) - 8 * 60 * 60 * 1000) < 60000; // 1分鐘內為在線
 
             // 使用 stats 中的 factoryName，如果沒有則使用設備ID
             const displayName = stats.factoryName || deviceId;
@@ -314,7 +314,7 @@
                     </div>
                     <div class="data-row">
                         <span class="data-label">最後更新:</span>
-                        <span class="data-value">${lastData.timestamp ? formatTime(lastData.timestamp) : '無數據'}</span>
+                        <span class="data-value">${lastData.post_at ? formatTime(lastData.post_at) : '無數據'}</span>
                     </div>
                 </div>
 
@@ -354,7 +354,7 @@
 
         // 格式化時間
         function formatTime(timestamp) {
-            const date = new Date(timestamp);
+            let date = new Date(new Date(timestamp).getTime() + 8 * 60 * 60 * 1000); // 調整為台北時間
             return date.toLocaleString('zh-TW', {
                 timeZone: 'Asia/Taipei',
                 year: 'numeric',
