@@ -1,6 +1,6 @@
 #include <ESP8266WiFi.h>
-#include <WiFiClientSecure.h> 
 #include <ESP8266HTTPClient.h>
+#include <WiFiClient.h> 
 #include <OneWire.h> 
 #include <DallasTemperature.h> 
 #include <Wire.h>
@@ -22,9 +22,9 @@ unsigned long AlertTimerDelay = 30000;
 const char* ssid = "Dlink";
 const char* password = "chen0975477079";
 
-const int Id = 3;
+const int Id = 1;
 
-const String postUri = "https://iot-monitor.n3np6ji39417.workers.dev/api/upload";
+const String postUri = "http://iot-monitor.n3np6ji39417.workers.dev/api/upload";
 const String Pd = "pMFYKB9Kn4W9quNJ";
 
 void WifiConnect(); 
@@ -77,17 +77,13 @@ void loop() {
     if(WiFi.status()!= WL_CONNECTED){
         WifiConnect();
       }
-      WiFiClientSecure httpsClient;
-      httpsClient.setInsecure(); // 跳過憑證驗證，維持 HTTPS 穩定度
-      httpsClient.setTimeout(10000); // 設定 10 秒逾時
-      //httpsClient.setTrustAnchors(&cert);
-      HTTPClient https;
-      if (https.begin(httpsClient, postUri)) {
-        https.addHeader("Content-Type", "application/json");
-
+      WiFiClient httpClient;
+      httpClient.setTimeout(10000); // 設定 10 秒逾時
+      HTTPClient http;
+      if (http.begin(httpClient, postUri)) {
+        http.addHeader("Content-Type", "application/json");
         // 3. 獲取目前 Unix 時間戳
         time_t now = time(nullptr);
-
         // 4. 構建 JSON (根據你的 CURL 格式)
         JsonDocument doc;
         doc["deviceId"] = Id;
@@ -101,15 +97,15 @@ void loop() {
 
         // 5. 發送 POST
         Serial.println("Sending data to Cloudflare...");
-        int httpResponseCode = https.POST(requestBody);
+        int httpResponseCode = http.POST(requestBody);
 
         if (httpResponseCode > 0) {
-          Serial.printf("HTTP Code: %d, Response: %s\n", httpResponseCode, https.getString().c_str());
+          Serial.printf("HTTP Code: %d, Response: %s\n", httpResponseCode, http.getString().c_str());
         } else {
-          Serial.printf("Error: %s\n", https.errorToString(httpResponseCode).c_str());
+          Serial.printf("Error: %s\n", http.errorToString(httpResponseCode).c_str());
         }
 
-        https.end(); // 務必釋放記憶體
+        http.end(); // 務必釋放記憶體
       }
 
   }
