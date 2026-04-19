@@ -27,6 +27,7 @@ const int Id = 3;
 const String postUri = "https://iot-monitor.n3np6ji39417.workers.dev/api/upload";
 const String Pd = "pMFYKB9Kn4W9quNJ";
 
+void WifiConnect(); 
 void setup() {
   delay(1000);
   Serial.begin(115200);
@@ -49,6 +50,7 @@ void setup() {
   Serial.println("");
 
   Wire.begin();
+  sensors.begin();
   lightMeter.begin();
   Serial.println(F("BH1750 Test begin"));
 }
