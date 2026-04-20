@@ -2,15 +2,13 @@
 export async function checkAlertTask(env) {
     try {
         const { results: settings } = await env.DB.prepare("SELECT * FROM settings").all();
-        const { results: devices } = await env.DB.prepare("SELECT * FROM devices WHERE rowid IN (SELECT MAX(rowid) FROM devices GROUP BY device_Id)").all();
+        const { results: devices } = await env.DB.prepare("SELECT * FROM devices WHERE rowid IN (SELECT MAX(rowid) FROM devices GROUP BY device_Id) and created_at >= datetime('now', '-10 minutes')").all();
         // 併發檢查所有設備
-        console.log(`get device count: ${devices.length}`);
-
         let checkPromises = [];
         const now = Date.now();
         const oneMinuteAgo = now - (60 * 1000); // 一分鐘前的時間戳
-        devices.forEach((d)=>{
-            checkPromises.push(checkDeviceStatus(settings.find(s=>s.device_Id == d.device_id), d, oneMinuteAgo));
+        settings.forEach((s)=>{
+            checkPromises.push(checkDeviceStatus(s, devices.find(d=>d.device_id == s.device_Id), oneMinuteAgo));
         });
         const checkResult = await Promise.allSettled(checkPromises);
 
@@ -27,7 +25,6 @@ export async function checkAlertTask(env) {
 async function checkDeviceStatus(setting, deviceData, oneMinuteAgo) {
     try {
         let alerts = [];
-
         // 檢查1: timestamp超過一分鐘
         var timestamp = new Date(deviceData.post_at);
         if (timestamp < oneMinuteAgo) {
@@ -53,13 +50,15 @@ async function checkDeviceStatus(setting, deviceData, oneMinuteAgo) {
         // 如果有警報，發送Discord通知
         if (alerts.length > 0 && setting.discord_token) {
             await sendDiscordAlert(setting.discord_token, alerts, deviceData);
-            console.log(`Sent ${alerts.length} alerts for device ${deviceData.device_id}`);
-            return true;
+            console.log(`Sent ${alerts.length} alerts to discord for device ${deviceData.device_id}`);
         }
-
-        return false;
+        if (alerts.length > 0 && setting.telegram_token && setting.telegram_chat_id) {
+            await sendTelegramAlert(setting.telegram_token, setting.telegram_chat_id, alerts, deviceData);
+            console.log(`Sent ${alerts.length} alerts to telegram for device ${deviceData.device_id}`);
+        }
+        return true;
     } catch (error) {
-        console.error(`Error checking device ${deviceId}:`, error);
+        console.log(`Error checking device ${deviceId}:`, error);
         return false;
     }
 }
@@ -68,6 +67,7 @@ async function checkDeviceStatus(setting, deviceData, oneMinuteAgo) {
 // 發送Discord警報
 async function sendDiscordAlert(webhookToken, alerts, lastData) {
     try {
+        let post_at = new Date(new Date(lastData.post_at).getTime() + 8 * 60 * 60 * 1000); // 調整為台北時間
         const embed = {
             title: "🚨 IoT設備警報",
             description: alerts.join('\n\n'),
@@ -75,7 +75,7 @@ async function sendDiscordAlert(webhookToken, alerts, lastData) {
             fields: [
                 {
                     name: "📊 當前數據",
-                    value: `溫度: ${lastData.temperature}°C\n光照: ${lastData.light} lux\n時間: ${new Date(lastData.post_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}`,
+                    value: `溫度: ${lastData.temperature}°C\n光照: ${lastData.light} lux\n時間: ${post_at.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}`,
                     inline: true
                 }
             ],
@@ -107,3 +107,31 @@ async function sendDiscordAlert(webhookToken, alerts, lastData) {
         throw error;
     }
 } 
+
+// 發送telegram警報
+async function sendTelegramAlert(telegramToken, chatId, alerts, lastData) {
+    try {
+        let post_at = new Date(new Date(lastData.post_at).getTime() + 8 * 60 * 60 * 1000); // 調整為台北時間
+        const message = alerts.join('\n\n');
+        const response = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                chat_id: chatId,
+                text: "<b>🚨 IoT設備警報</b>\n " + message + `\n<b>📊 當前數據</b>\n溫度: <code>${lastData.temperature}°C</code>\n光照: <code>${lastData.light} lux</code>\n時間: <code>${post_at.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}</code>`,
+                parse_mode: "HTML"
+            })
+        });
+        if (!response.ok) {
+            throw new Error(`Telegram API failed: ${response.status}`);
+        }
+
+        console.log('Telegram alert sent successfully');
+    } catch (error) {
+        console.error('Error sending Telegram alert:', error);
+        throw error;
+    }
+} 
+            
