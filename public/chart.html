@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>單日監控數據圖表</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" crossorigin="anonymous"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        canvas { width: 100% !important; height: auto !important; }
+        .loading { color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2>單日監控折線圖</h2>
+        <button onclick="fetchData()">刷新數據</button>
+    </div>
+    
+    <div id="status" class="loading">正在載入數據...</div>
+    <canvas id="monitorChart"></canvas>
+</div>
+
+<script>
+    let myChart = null;
+
+    // 初始化圖表
+    function initChart(labels, tempData, lightData) {
+        const ctx = document.getElementById('monitorChart').getContext('2d');
+        
+        // 如果圖表已存在則銷毀重製 (避免 AJAX 重複重疊)
+        if (myChart) {
+            myChart.destroy();
+        }
+
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '溫度 (°C)',
+                        data: tempData,
+                        borderColor: 'rgb(255, 99, 132)', // 紅色
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        yAxisID: 'y', // 使用左邊 Y 軸
+                        tension: 0.3
+                    },
+                    {
+                        label: '光度 (Lux)',
+                        data: lightData,
+                        borderColor: 'rgb(54, 162, 235)', // 藍色
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        yAxisID: 'y1', // 使用右邊 Y 軸
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { // 左邊軸 (溫度)
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: { display: true, text: '溫度 (°C)' }
+                    },
+                    y1: { // 右邊軸 (光度)
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: { display: true, text: '光度 (Lux)' },
+                        // 避免右軸網格線與左軸重疊太亂，可關閉網格
+                        grid: { drawOnChartArea: false }
+                    }
+                }
+            }
+        });
+    }
+
+    // 使用 AJAX (Fetch API) 讀取資料
+    async function fetchData() {
+        const statusEl = document.getElementById('status');
+        const titleEl = document.querySelector('h2'); // 選取 h2 標籤
+    
+        statusEl.innerText = "讀取中...";
+        // 1. 從網址取得 title 參數
+        const urlParams = new URLSearchParams(window.location.search);
+        const customTitle = urlParams.get('title'); // 取得 ?title=xxx
+        
+        if (customTitle) {
+            titleEl.innerText = decodeURIComponent(customTitle);
+        }
+    
+        const deviceId = urlParams.get('device_id') || 'default_device';
+        try {
+            const response = await fetch('/api/chart-data?device_id=' + encodeURIComponent(deviceId)); 
+            if (!response.ok) throw new Error('網路回應不正確 (500 或 404)');
+
+            const result = await response.json();
+            initChart(result.time, result.temperatures, result.lights);
+            
+            statusEl.innerText = "最後更新時間: " + new Date().toLocaleTimeString();
+        } catch (error) {
+            console.error('Fetch 錯誤:', error);
+            statusEl.innerText = "讀取失敗: " + error.message;
+        }
+    }
+
+    // 頁面載入後自動執行
+    window.onload = fetchData;
+</script>
+
+</body>
+</html>

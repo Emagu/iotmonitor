@@ -30,7 +30,7 @@ export async function handlerDevices(request, env, ctx) {
         });
         return new Response(JSON.stringify({ devices: formattedDevices }), { status: 200 });
     } catch (error) {
-        console.error("Error fetching devices:", error);
+        console.log("Error fetching devices:", error);
         return new Response("Internal server error", { status: 500 });
     }
 }
