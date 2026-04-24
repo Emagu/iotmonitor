@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>設備參數管理</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; background: #f5f5f5; color: #333; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h2 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-weight: 600; margin-bottom: 8px; color: #555; }
+        
+        input[type="text"], input[type="number"] {
+            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; transition: border-color 0.2s;
+        }
+        input:focus { border-color: #4b83f0; outline: none; }
+
+        /* 切換開關樣式 (Switch) */
+        .switch-group { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px outline #f9f9f9; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc; transition: .4s; border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+            background-color: white; transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #4b83f0; }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        .btn-group { margin-top: 30px; display: flex; gap: 10px; }
+        button {
+            flex: 1; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600; transition: opacity 0.2s;
+        }
+        .btn-save { background: #4b83f0; color: white; }
+        .btn-cancel { background: #eee; color: #666; }
+        button:hover { opacity: 0.85; }
+
+        #status-msg { margin-top: 15px; font-size: 14px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>設備參數編輯</h2>
+    <div id="status-msg"></div>
+
+    <form id="configForm">
+        <!-- 設備名稱 -->
+        <div class="form-group">
+            <label>設備名稱 (device_id)</label>
+            <input type="text" id="deviceName" placeholder="例如: Greenhouse_01" readonly style="background:#f9f9f9;">
+        </div>
+
+        <!-- 溫標設定 -->
+        <div style="display: flex; gap: 15px;">
+            <div class="form-group" style="flex:1;">
+                <label>最高溫度 (°C)</label>
+                <input type="number" id="maxTemp" step="0.1" placeholder="35.0">
+            </div>
+            <div class="form-group" style="flex:1;">
+                <label>最低溫度 (°C)</label>
+                <input type="number" id="minTemp" step="0.1" placeholder="10.0">
+            </div>
+        </div>
+
+        <!-- 光照設定 -->
+        <div class="form-group">
+            <label>最高光照值 (Lux)</label>
+            <input type="number" id="maxLight" step="1" placeholder="2000">
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+        <!-- 通知開關 -->
+        <div class="switch-group">
+            <label>發送到 Discord 通知</label>
+            <label class="switch">
+                <input type="checkbox" id="sendDiscord">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="switch-group">
+            <label>發送到 Telegram 通知</label>
+            <label class="switch">
+                <input type="checkbox" id="sendTelegram">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="btn-group">
+            <button type="button" class="btn-cancel" onclick="window.history.back()">取消返回</button>
+            <button type="submit" class="btn-save">儲存設定</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const deviceId = urlParams.get('device_id') || 'Default_Device';
+    
+    // 初始化頁面
+    document.addEventListener('DOMContentLoaded', async () => {
+        document.getElementById('deviceName').value = deviceId;
+        await loadConfig();
+    });
+
+    // 讀取目前的設定值 (AJAX)
+    async function loadConfig() {
+        try {
+            const response = await fetch(`/api/device/?device_id=${deviceId}`);
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('deviceName').value = data.factory_name;
+                document.getElementById('maxTemp').value = data.over_heat;
+                document.getElementById('minTemp').value = data.low_heat;
+                document.getElementById('maxLight').value = data.over_lux;
+                document.getElementById('sendDiscord').checked = data.is_notify_discord;
+                document.getElementById('sendTelegram').checked = data.is_notify_telegram;
+            }
+        } catch (err) {
+            console.error("載入失敗:", err);
+        }
+    }
+
+    // 儲存設定 (AJAX POST)
+    document.getElementById('configForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const msg = document.getElementById('status-msg');
+        msg.innerText = "儲存中...";
+
+        const payload = {
+            over_heat: parseFloat(document.getElementById('maxTemp').value),
+            low_heat: parseFloat(document.getElementById('minTemp').value),
+            over_lux: parseFloat(document.getElementById('maxLight').value),
+            is_notify_discord: document.getElementById('sendDiscord').checked,
+            is_notify_telegram: document.getElementById('sendTelegram').checked
+        };
+
+        try {
+            const response = await fetch(`/api/device/?device_id=${deviceId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                msg.style.color = "green";
+                msg.innerText = "✅ 儲存成功！";
+                setTimeout(() => { msg.innerText = ""; }, 3000);
+            } else {
+                throw new Error("儲存失敗");
+            }
+        } catch (err) {
+            msg.style.color = "red";
+            msg.innerText = "❌ 錯誤: " + err.message;
+        }
+    };
+</script>
+
+</body>
+</html>

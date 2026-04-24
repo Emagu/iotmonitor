@@ -48,11 +48,11 @@ async function checkDeviceStatus(setting, deviceData, oneMinuteAgo) {
         }
 
         // 如果有警報，發送Discord通知
-        if (alerts.length > 0 && setting.discord_token) {
+        if (alerts.length > 0 && setting.discord_token && setting.is_notify_discord) {
             await sendDiscordAlert(setting.discord_token, alerts, deviceData);
             console.log(`Sent ${alerts.length} alerts to discord for device ${deviceData.device_id}`);
         }
-        if (alerts.length > 0 && setting.telegram_token && setting.telegram_chat_id) {
+        if (alerts.length > 0 && setting.telegram_token && setting.telegram_chat_id && setting.is_notify_telegram) {
             await sendTelegramAlert(setting.telegram_token, setting.telegram_chat_id, alerts, deviceData);
             console.log(`Sent ${alerts.length} alerts to telegram for device ${deviceData.device_id}`);
         }
