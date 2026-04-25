@@ -11,12 +11,12 @@ async function loadDevices() {
 
         const data = await response.json();
         
-        if (!data.devices || Object.keys(data.devices).length === 0) {
+        if (!data || Object.keys(data).length === 0) {
             contentDiv.innerHTML = '<div class="no-devices">目前沒有設備數據</div>';
             return;
         }
 
-        displayDevices(data.devices);
+        displayDevices(data);
     } catch (error) {
         console.error('Error:', error);
         contentDiv.innerHTML = `<div class="error">錯誤: ${error.message}</div>`;
@@ -44,13 +44,9 @@ function createDeviceCard(deviceId, device) {
     const card = document.createElement('div');
     card.className = 'device-card';
 
-    const lastData = device.lastData || {};
-    const stats = device.stats || {};
     const now = Date.now();
-    const isOnline = lastData.post_at && (now - new Date(lastData.post_at) - 8 * 60 * 60 * 1000) < 60000; // 1分鐘內為在線
-
-    // 使用 stats 中的 factoryName，如果沒有則使用設備ID
-    const displayName = stats.factoryName || deviceId;
+    const isOnline = device.modifyDate && (now - new Date(device.modifyDate) - 8 * 60 * 60 * 1000) < 60000; // 1分鐘內為在線
+    const displayName = device.factoryName || deviceId;
 
     card.innerHTML = `
         <div class="device-header">
@@ -64,15 +60,15 @@ function createDeviceCard(deviceId, device) {
             <h3 style="margin-bottom: 15px; color: #333;">📊 即時數據</h3>
             <div class="data-row">
                 <span class="data-label">溫度:</span>
-                <span class="data-value temp-value">${lastData.temperature ? lastData.temperature + '°C' : '無數據'}</span>
+                <span class="data-value temp-value">${device.lastTemp ? device.lastTemp + '°C' : '無數據'}</span>
             </div>
             <div class="data-row">
                 <span class="data-label">光照:</span>
-                <span class="data-value light-value">${lastData.light ? lastData.light + ' lux' : '無數據'}</span>
+                <span class="data-value light-value">${device.lastLight ? device.lastLight + ' lux' : '無數據'}</span>
             </div>
             <div class="data-row">
                 <span class="data-label">最後更新:</span>
-                <span class="data-value">${lastData.post_at ? formatTime(lastData.post_at) : '無數據'}</span>
+                <span class="data-value">${device.modifyDate ? formatTime(device.modifyDate) : '無數據'}</span>
             </div>
         </div>
 
@@ -81,27 +77,27 @@ function createDeviceCard(deviceId, device) {
             <div class="stats-grid">
                 <div class="stat-item">
                     <div class="stat-label">平均溫度</div>
-                    <div class="stat-value temp-value">${stats.avgTemp ? stats.avgTemp.toFixed(1) + '°C' : '無數據'}</div>
+                    <div class="stat-value temp-value">${device.avgTemp ? device.avgTemp.toFixed(1) + '°C' : '無數據'}</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">最高溫度</div>
-                    <div class="stat-value temp-value">${stats.maxTemp ? stats.maxTemp + '°C' : '無數據'}</div>
+                    <div class="stat-value temp-value">${device.maxTemp ? device.maxTemp + '°C' : '無數據'}</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">最低溫度</div>
-                    <div class="stat-value temp-value">${stats.minTemp ? stats.minTemp + '°C' : '無數據'}</div>
+                    <div class="stat-value temp-value">${device.minTemp ? device.minTemp + '°C' : '無數據'}</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">平均光照</div>
-                    <div class="stat-value light-value">${stats.avgLight ? stats.avgLight.toFixed(0) + ' lux' : '無數據'}</div>
+                    <div class="stat-value light-value">${device.avgLight ? device.avgLight.toFixed(0) + ' lux' : '無數據'}</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">最高光照</div>
-                    <div class="stat-value light-value">${stats.maxLight ? stats.maxLight + ' lux' : '無數據'}</div>
+                    <div class="stat-value light-value">${device.maxLight ? device.maxLight + ' lux' : '無數據'}</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">最低光照</div>
-                    <div class="stat-value light-value">${stats.minLight ? stats.minLight + ' lux' : '無數據'}</div>
+                    <div class="stat-value light-value">${device.minLight ? device.minLight + ' lux' : '無數據'}</div>
                 </div>
             </div>
         </div>

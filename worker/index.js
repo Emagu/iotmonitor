@@ -4,7 +4,7 @@ import { handleChartDate } from './handler/chart_data'
 import { handlerDevice } from './handler/device'
 
 import { checkAlertTask } from './tasks/checkAlerts'
-import { statsTask } from './tasks/stats'
+import { deleteOverTimeTask } from './tasks/deleteOverTime'
 
 export default {
   async fetch(request, env, ctx) {
@@ -20,8 +20,8 @@ export default {
     if (event.cron === "* * * * *") {
       await checkAlertTask(env);
     } 
-    if (event.cron === "*/10 * * * *") {
-      await statsTask(env);
-    } 
+    if (event.cron === "0 0 * * *") {
+      await deleteOverTimeTask(env);
+    }
   }
 }

@@ -4,8 +4,8 @@ compatibility_date = "2025-06-27"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "monitor"
-database_id = "342bb711-e871-4e2e-b840-503b30630a77"
+database_name = "monitorv2"
+database_id = "d526cbb9-16d2-48cc-be73-559a7bddab2c"
 remote = true
 
 [observability]
@@ -22,6 +22,6 @@ binding = "ASSETS"
 
 [triggers]
 crons = [
-  "*/10 * * * *",   # 每 10 分鐘執行一次
-  "* * * * *"       # 每天凌晨 0 點執行一次
+  "* * * * *",
+  "0 8 * * *"       # 每天凌晨 0 點執行一次
 ]

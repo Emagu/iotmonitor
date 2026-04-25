@@ -6,29 +6,18 @@ export async function handlerDevices(request, env, ctx) {
 
     try {
         const { results: settings } = await env.DB.prepare("SELECT * FROM settings").all();
-        const { results: devicesStats } = await env.DB.prepare("SELECT * FROM deviceStats").all();
-        const { results: devicesData } = await env.DB.prepare("SELECT * FROM devices WHERE rowid IN (SELECT MAX(rowid) FROM devices GROUP BY device_Id)").all();
-        const dataMap = Object.fromEntries(devicesData.map(d => [d.device_id, d]));
-        const statsMap = Object.fromEntries(devicesStats.map(s => [s.device_id, s]));
+        const { results: device_status } = await env.DB.prepare("SELECT * FROM device_status").all();
+        const dataMap = Object.fromEntries(device_status.map(d => [d.device_id, d]));
 
         // 格式化返回數據
         const formattedDevices = {};
         settings.forEach(setting=>{
-            const dId = setting.device_Id; 
-            formattedDevices[dId] = {
-                lastData: dataMap[dId] || {},
-                stats: statsMap[dId] || {
-                    avgTemp: null,
-                    maxTemp: null,
-                    minTemp: null,
-                    avgLight: null,
-                    maxLight: null,
-                    minLight: null,
-                    dataCount: 0
-                }
-            };
+            let dId = setting.device_Id;
+            if(dataMap[dId]) {
+                dataMap[dId].factoryName = setting.factory_name;
+            }
         });
-        return new Response(JSON.stringify({ devices: formattedDevices }), { status: 200 });
+        return new Response(JSON.stringify(dataMap), { status: 200 });
     } catch (error) {
         console.log("Error fetching devices:", error);
         return new Response("Internal server error", { status: 500 });

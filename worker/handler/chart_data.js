@@ -15,18 +15,17 @@ export async function handleChartDate(request, env, ctx) {
         const { results } = await env.DB.prepare(`
             SELECT 
                 STRFTIME('%H:%M', post_at, '+8 hours') as time_label,
-                AVG(temperature) as avg_temp,
-                AVG(light) as avg_light  -- 假設光度欄位名稱為 light
-            FROM devices
+                temperature,
+                light
+            FROM device_history
             WHERE device_id = ? 
                 AND post_at >= DATETIME('now', 'start of day', '-8 hours')
-            GROUP BY STRFTIME('%Y-%m-%d %H:', post_at, '+8 hours') || (CAST(STRFTIME('%M', post_at, '+8 hours') AS INTEGER) / 10)
             ORDER BY post_at ASC
         `).bind(deviceId).all();
         const data = {
             time: results.map(row => row.time_label),
-            temperatures: results.map(row => Math.round(row.avg_temp * 10) / 10), // 四捨五入到小數1位
-            lights: results.map(row => Math.round(row.avg_light))
+            temperatures: results.map(row => Math.round(row.temperature * 10) / 10), // 四捨五入到小數1位
+            lights: results.map(row => Math.round(row.light))
         };
 
         return new Response(JSON.stringify(data), { status: 200 });

@@ -2,7 +2,7 @@
 export async function checkAlertTask(env) {
     try {
         const { results: settings } = await env.DB.prepare("SELECT * FROM settings").all();
-        const { results: devices } = await env.DB.prepare("SELECT * FROM devices WHERE rowid IN (SELECT MAX(rowid) FROM devices GROUP BY device_Id) and created_at >= datetime('now', '-10 minutes')").all();
+        const { results: devices } = await env.DB.prepare("SELECT * FROM device_status").all();
         // 併發檢查所有設備
         let checkPromises = [];
         const now = Date.now();
@@ -26,25 +26,25 @@ async function checkDeviceStatus(setting, deviceData, oneMinuteAgo) {
     try {
         let alerts = [];
         // 檢查1: timestamp超過一分鐘
-        var timestamp = new Date(deviceData.post_at);
+        var timestamp = new Date(deviceData.modifyDate).getTime();
         if (timestamp < oneMinuteAgo) {
             const minutesAgo = Math.floor((Date.now() - timestamp) / (60 * 1000));
             alerts.push(`⚠️ **設備離線警報** - 設備 ${deviceData.device_id} (${setting.factory_name}) 已離線 ${minutesAgo} 分鐘`);
         }
 
-        // 檢查2: temperature大於overHeat
-        if (setting.over_heat && deviceData.temperature > setting.over_heat) {
-            alerts.push(`🔥 **溫度過高警報** - 設備 ${deviceData.device_id} (${setting.factory_name}) 溫度 ${deviceData.temperature}°C 超過設定值 ${setting.over_heat}°C`);
+        // 檢查2: lastTemp大於overHeat
+        if (setting.over_heat && deviceData.lastTemp > setting.over_heat) {
+            alerts.push(`🔥 **溫度過高警報** - 設備 ${deviceData.device_id} (${setting.factory_name}) 溫度 ${deviceData.lastTemp}°C 超過設定值 ${setting.over_heat}°C`);
         }
 
-        // 檢查3: temperature小於lowHeat
-        if (setting.low_heat && deviceData.temperature < setting.low_heat) {
-            alerts.push(`❄️ **溫度過低警報** - 設備 ${deviceData.device_id} (${setting.factory_name}) 溫度 ${deviceData.temperature}°C 低於設定值 ${setting.low_heat}°C`);
+        // 檢查3: lastTemp小於lowHeat
+        if (setting.low_heat && deviceData.lastTemp < setting.low_heat) {
+            alerts.push(`❄️ **溫度過低警報** - 設備 ${deviceData.device_id} (${setting.factory_name}) 溫度 ${deviceData.lastTemp}°C 低於設定值 ${setting.low_heat}°C`);
         }
 
-        // 檢查4: light大於overLux
-        if (setting.over_lux && deviceData.light > setting.over_lux) {
-            alerts.push(`💡 **光照過強警報** - 設備 ${deviceData.device_id} (${setting.factory_name}) 光照 ${deviceData.light} lux 超過設定值 ${setting.over_lux} lux`);
+        // 檢查4: lastLight大於overLux
+        if (setting.over_lux && deviceData.lastLight > setting.over_lux) {
+            alerts.push(`💡 **光照過強警報** - 設備 ${deviceData.device_id} (${setting.factory_name}) 光照 ${deviceData.lastLight} lux 超過設定值 ${setting.over_lux} lux`);
         }
 
         // 如果有警報，發送Discord通知
@@ -67,7 +67,7 @@ async function checkDeviceStatus(setting, deviceData, oneMinuteAgo) {
 // 發送Discord警報
 async function sendDiscordAlert(webhookToken, alerts, lastData) {
     try {
-        let post_at = new Date(new Date(lastData.post_at).getTime() + 8 * 60 * 60 * 1000); // 調整為台北時間
+        let post_at = new Date(new Date(lastData.modifyDate).getTime() + 8 * 60 * 60 * 1000); // 調整為台北時間
         const embed = {
             title: "🚨 IoT設備警報",
             description: alerts.join('\n\n'),
@@ -75,7 +75,7 @@ async function sendDiscordAlert(webhookToken, alerts, lastData) {
             fields: [
                 {
                     name: "📊 當前數據",
-                    value: `溫度: ${lastData.temperature}°C\n光照: ${lastData.light} lux\n時間: ${post_at.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}`,
+                    value: `溫度: ${lastData.lastTemp}°C\n光照: ${lastData.lastLight} lux\n時間: ${post_at.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}`,
                     inline: true
                 }
             ],
@@ -111,7 +111,7 @@ async function sendDiscordAlert(webhookToken, alerts, lastData) {
 // 發送telegram警報
 async function sendTelegramAlert(telegramToken, chatId, alerts, lastData) {
     try {
-        let post_at = new Date(new Date(lastData.post_at).getTime() + 8 * 60 * 60 * 1000); // 調整為台北時間
+        let post_at = new Date(new Date(lastData.modifyDate).getTime() + 8 * 60 * 60 * 1000); // 調整為台北時間
         const message = alerts.join('\n\n');
         const response = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
             method: 'POST',
@@ -120,7 +120,7 @@ async function sendTelegramAlert(telegramToken, chatId, alerts, lastData) {
             },
             body: JSON.stringify({
                 chat_id: chatId,
-                text: "<b>🚨 IoT設備警報</b>\n " + message + `\n<b>📊 當前數據</b>\n溫度: <code>${lastData.temperature}°C</code>\n光照: <code>${lastData.light} lux</code>\n時間: <code>${post_at.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}</code>`,
+                text: "<b>🚨 IoT設備警報</b>\n " + message + `\n<b>📊 當前數據</b>\n溫度: <code>${lastData.lastTemp}°C</code>\n光照: <code>${lastData.lastLight} lux</code>\n時間: <code>${post_at.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}</code>`,
                 parse_mode: "HTML"
             })
         });
