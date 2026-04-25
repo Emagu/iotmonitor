@@ -20,12 +20,28 @@ export async function handleUpload(request, env, ctx) {
       on conflict(device_id) do update set \
       lastTemp=excluded.lastTemp, \
       avgTemp=(device_status.avgTemp * 9 + excluded.lastTemp) / 10, \
-      maxTemp=MAX(device_status.maxTemp, excluded.lastTemp), \
-      minTemp=MIN(device_status.minTemp, excluded.lastTemp), \
+      maxTemp=CASE \
+        WHEN window_start is null OR datetime('now') >= datetime(window_start, '+10 minutes') THEN excluded.lastTemp \
+        ELSE MAX(device_status.maxTemp, excluded.lastTemp) \
+      END, \
+      minTemp=CASE \
+        WHEN window_start is null OR datetime('now') >= datetime(window_start, '+10 minutes') THEN excluded.lastTemp \
+        ELSE MIN(device_status.minTemp, excluded.lastTemp) \
+      END, \
       lastLight=excluded.lastLight, \
       avgLight=(device_status.avgLight * 9 + excluded.lastLight) / 10, \
-      maxLight=MAX(device_status.maxLight, excluded.lastLight), \
-      minLight=MIN(device_status.minLight, excluded.lastLight), \
+      maxLight=CASE \
+        WHEN window_start is null OR datetime('now') >= datetime(window_start, '+10 minutes') THEN excluded.lastLight \
+        ELSE MAX(device_status.maxLight, excluded.lastLight) \
+      END, \
+      minLight=CASE \
+        WHEN window_start is null OR datetime('now') >= datetime(window_start, '+10 minutes') THEN excluded.lastLight \
+        ELSE MIN(device_status.minLight, excluded.lastLight) \
+      END, \
+      window_start=CASE \
+        WHEN window_start is null OR datetime('now') >= datetime(window_start, '+10 minutes') THEN datetime('now') \
+        ELSE window_start \
+      END, \
       modifyDate=excluded.modifyDate`
     ).bind(deviceId, temperature, light).run();
 
