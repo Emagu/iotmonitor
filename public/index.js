@@ -97,7 +97,7 @@ function createDeviceCard(deviceId, device) {
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">最低光照</div>
-                    <div class="stat-value light-value">${device.minLight ? device.minLight + ' lux' : '無數據'}</div>
+                    <div class="stat-value light-value">${device.minLight >= 0 ? device.minLight + ' lux' : '無數據'}</div>
                 </div>
             </div>
         </div>
