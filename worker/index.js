@@ -4,6 +4,7 @@ import { handleChartDate } from './handler/chart_data'
 import { handlerDevice } from './handler/device'
 
 import { checkAlertTask } from './tasks/checkAlerts'
+import { saveToHistoryTask } from './tasks/saveToHistory'
 import { deleteOverTimeTask } from './tasks/deleteOverTime'
 
 export default {
@@ -19,6 +20,9 @@ export default {
   async scheduled(event, env, ctx) {
     if (event.cron === "* * * * *") {
       await checkAlertTask(env);
+    } 
+    if (event.cron === "*/10 * * * *") {
+      await saveToHistoryTask(env);
     } 
     if (event.cron === "0 0 * * *") {
       await deleteOverTimeTask(env);
