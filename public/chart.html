@@ -11,6 +11,12 @@
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         canvas { width: 100% !important; height: auto !important; }
         .loading { color: #666; font-style: italic; }
+        button {
+            flex: 1; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600; transition: opacity 0.2s;
+        }
+        .btn-save { background: #4b83f0; color: white; }
+        .btn-cancel { background: #eee; color: #666; }
+        button:hover { opacity: 0.85; }
     </style>
 </head>
 <body>
@@ -18,7 +24,8 @@
 <div class="container">
     <div class="header">
         <h2>單日監控折線圖</h2>
-        <button onclick="fetchData()">刷新數據</button>
+        <button class="btn-save" onclick="fetchData()">刷新數據</button>
+        <button class="btn-cancel" onclick="closePopup()">關閉視窗</button>
     </div>
     
     <div id="status" class="loading">正在載入數據...</div>
@@ -27,7 +34,12 @@
 
 <script>
     let myChart = null;
-
+    function closePopup() { 
+        if (window.opener && !window.opener.closed) {
+            window.opener.focus(); // 嘗試將焦點切回父視窗
+            window.close();
+        } 
+    }
     // 初始化圖表
     function initChart(labels, tempData, lightData) {
         const ctx = document.getElementById('monitorChart').getContext('2d');
