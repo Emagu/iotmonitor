@@ -19,10 +19,12 @@ unsigned long timerDelay = 30000;
 unsigned long lastAlertTime = 0;
 unsigned long AlertTimerDelay = 30000;
 
-const char* ssid = "Dlink";
-const char* password = "chen0975477079";
+//const char* ssid = "Dlink";
+//const char* password = "chen0975477079";
+const char* ssid = "cht5197";
+const char* password = "052655197";
 
-const int Id = 1;
+const int Id = 4;
 
 const String postUri = "http://iot-monitor.n3np6ji39417.workers.dev/api/upload";
 const String Pd = "pMFYKB9Kn4W9quNJ";
