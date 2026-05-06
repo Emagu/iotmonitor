@@ -23,6 +23,10 @@ export async function checkAlertTask(env) {
     }
 }
 async function checkDeviceStatus(setting, deviceData, oneMinuteAgo) {
+    if(deviceData == null) {
+        console.log(`No data for device ${setting.device_Id}`);
+        return true;
+    }
     try {
         let alerts = [];
         // 檢查1: timestamp超過一分鐘

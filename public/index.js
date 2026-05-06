@@ -29,9 +29,8 @@ function displayDevices(devices) {
     const devicesGrid = document.createElement('div');
     devicesGrid.className = 'devices-grid';
 
-    Object.keys(devices).forEach(deviceId => {
-        const device = devices[deviceId];
-        const card = createDeviceCard(deviceId, device);
+    devices.forEach(device => {
+        const card = createDeviceCard(device.device_id, device);
         devicesGrid.appendChild(card);
     });
 
@@ -64,7 +63,7 @@ function createDeviceCard(deviceId, device) {
             </div>
             <div class="data-row">
                 <span class="data-label">光照:</span>
-                <span class="data-value light-value">${device.lastLight ? device.lastLight + ' lux' : '無數據'}</span>
+                <span class="data-value light-value">${device.lastLight >= 0 ? device.lastLight + ' lux' : '無數據'}</span>
             </div>
             <div class="data-row">
                 <span class="data-label">最後更新:</span>
@@ -89,11 +88,11 @@ function createDeviceCard(deviceId, device) {
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">平均光照</div>
-                    <div class="stat-value light-value">${device.avgLight ? device.avgLight.toFixed(0) + ' lux' : '無數據'}</div>
+                    <div class="stat-value light-value">${device.avgLight >= 0 ? device.avgLight.toFixed(0) + ' lux' : '無數據'}</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">最高光照</div>
-                    <div class="stat-value light-value">${device.maxLight ? device.maxLight + ' lux' : '無數據'}</div>
+                    <div class="stat-value light-value">${device.maxLight >= 0 ? device.maxLight + ' lux' : '無數據'}</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">最低光照</div>
@@ -120,6 +119,26 @@ function createDeviceCard(deviceId, device) {
                 onmouseout="this.style.backgroundColor='#007AFF'"
             >
                 查看今日數據 ↗
+            </button>
+        </div>
+        <div class="action-footer" style="margin-top: 20px; text-align: center;">
+            <button 
+                onclick="window.open('./device.html?device_id=${encodeURIComponent(deviceId)}', '_blank')" 
+                style="
+                    background-color: #007AFF; 
+                    color: white; 
+                    border: none; 
+                    padding: 10px 20px; 
+                    border-radius: 8px; 
+                    cursor: pointer; 
+                    font-size: 14px;
+                    width: 100%;
+                    transition: background-color 0.3s;
+                "
+                onmouseover="this.style.backgroundColor='#0051a8'"
+                onmouseout="this.style.backgroundColor='#007AFF'"
+            >
+                編輯設備設定 ↗
             </button>
         </div>
     `;

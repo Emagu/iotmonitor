@@ -94,7 +94,7 @@
         </div>
 
         <div class="btn-group">
-            <button type="button" class="btn-cancel" onclick="window.history.back()">取消返回</button>
+            <button type="button" class="btn-cancel" onclick="closePopup()">返回</button>
             <button type="submit" class="btn-save">儲存設定</button>
         </div>
     </form>
@@ -103,7 +103,12 @@
 <script>
     const urlParams = new URLSearchParams(window.location.search);
     const deviceId = urlParams.get('device_id') || 'Default_Device';
-    
+    function closePopup() { 
+        if (window.opener && !window.opener.closed) {
+            window.opener.focus(); // 嘗試將焦點切回父視窗
+            window.close();
+        } 
+    }
     // 初始化頁面
     document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('deviceName').value = deviceId;

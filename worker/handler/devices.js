@@ -5,19 +5,20 @@ export async function handlerDevices(request, env, ctx) {
     }
 
     try {
-        const { results: settings } = await env.DB.prepare("SELECT * FROM settings").all();
+        const { results: settings } = await env.DB.prepare("SELECT * FROM settings order by sort").all();
         const { results: device_status } = await env.DB.prepare("SELECT * FROM device_status").all();
         const dataMap = Object.fromEntries(device_status.map(d => [d.device_id, d]));
 
         // 格式化返回數據
-        const formattedDevices = {};
+        const formattedDevices = [];
         settings.forEach(setting=>{
             let dId = setting.device_Id;
             if(dataMap[dId]) {
                 dataMap[dId].factoryName = setting.factory_name;
+                formattedDevices.push(dataMap[dId]);
             }
         });
-        return new Response(JSON.stringify(dataMap), { status: 200 });
+        return new Response(JSON.stringify(formattedDevices), { status: 200 });
     } catch (error) {
         console.log("Error fetching devices:", error);
         return new Response("Internal server error", { status: 500 });
