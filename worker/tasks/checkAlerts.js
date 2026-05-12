@@ -71,7 +71,8 @@ async function checkDeviceStatus(setting, deviceData, oneMinuteAgo) {
 // 發送Discord警報
 async function sendDiscordAlert(webhookToken, alerts, lastData) {
     try {
-        let post_at = new Date(new Date(lastData.modifyDate).getTime() + 8 * 60 * 60 * 1000); // 調整為台北時間
+        //let post_at = new Date(new Date(lastData.modifyDate).getTime() + 8 * 60 * 60 * 1000); // 調整為台北時間
+        let post_at = new Date(new Date(lastData.modifyDate).getTime());
         const embed = {
             title: "🚨 IoT設備警報",
             description: alerts.join('\n\n'),
@@ -115,7 +116,8 @@ async function sendDiscordAlert(webhookToken, alerts, lastData) {
 // 發送telegram警報
 async function sendTelegramAlert(telegramToken, chatId, alerts, lastData) {
     try {
-        let post_at = new Date(new Date(lastData.modifyDate).getTime() + 8 * 60 * 60 * 1000); // 調整為台北時間
+        //let post_at = new Date(new Date(lastData.modifyDate).getTime() + 8 * 60 * 60 * 1000); // 調整為台北時間
+        let post_at = new Date(new Date(lastData.modifyDate).getTime());
         const message = alerts.join('\n\n');
         const response = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
             method: 'POST',
