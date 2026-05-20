@@ -72,6 +72,23 @@ function createDeviceCard(deviceId, device) {
         </div>
 
         <div class="stats-section">
+            <div class="stats-title">📈 今日統計</div>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">最高溫度</div>
+                    <div class="stat-value temp-value">${device.maxTempFullDay ? device.maxTempFullDay + '°C' : '無數據'}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">最低溫度</div>
+                    <div class="stat-value temp-value">${device.minTempFullDay ? device.minTempFullDay + '°C' : '無數據'}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">最高光照</div>
+                    <div class="stat-value light-value">${device.maxlightFullDay >= 0 ? device.maxlightFullDay + ' lux' : '無數據'}</div>
+                </div>
+            </div>
+        </div>
+        <div class="stats-section">
             <div class="stats-title">📈 最近10分鐘統計</div>
             <div class="stats-grid">
                 <div class="stat-item">
