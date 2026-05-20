@@ -6,6 +6,7 @@ import { handlerDevice } from './handler/device'
 import { checkAlertTask } from './tasks/checkAlerts'
 import { saveToHistoryTask } from './tasks/saveToHistory'
 import { deleteOverTimeTask } from './tasks/deleteOverTime'
+import { updateDailyStatusTask } from './tasks/updateDailyStatus'
 
 export default {
   async fetch(request, env, ctx) {
@@ -24,8 +25,9 @@ export default {
     if (event.cron === "*/10 * * * *") {
       await saveToHistoryTask(env);
     } 
-    if (event.cron === "0 0 * * *") {
+    if (event.cron === "0 8 * * *") {
       await deleteOverTimeTask(env);
+      await updateDailyStatusTask(env);
     }
   }
 }

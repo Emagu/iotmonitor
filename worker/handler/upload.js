@@ -38,6 +38,9 @@ export async function handleUpload(request, env, ctx) {
         WHEN window_start is null OR datetime('now') >= datetime(window_start, '+10 minutes') THEN excluded.lastLight \
         ELSE MIN(device_status.minLight, excluded.lastLight) \
       END, \
+      maxTempFullDay=MAX(device_status.maxTempFullDay, excluded.maxTempFullDay), \
+      minTempFullDay=MAX(device_status.minTempFullDay, excluded.minTempFullDay), \
+      maxlightFullDay=MAX(device_status.maxlightFullDay, excluded.maxlightFullDay), \
       window_start=CASE \
         WHEN window_start is null OR datetime('now') >= datetime(window_start, '+10 minutes') THEN datetime('now') \
         ELSE window_start \
