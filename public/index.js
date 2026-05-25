@@ -135,7 +135,7 @@ function createDeviceCard(deviceId, device) {
                 onmouseover="this.style.backgroundColor='#0051a8'"
                 onmouseout="this.style.backgroundColor='#007AFF'"
             >
-                查看今日數據 ↗
+                查看單日數據 ↗
             </button>
         </div>
         <div class="action-footer" style="margin-top: 20px; text-align: center;">

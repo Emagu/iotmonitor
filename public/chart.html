@@ -24,6 +24,8 @@
 <div class="container">
     <div class="header">
         <h2>單日監控折線圖</h2>
+        <button class="btn-save" onclick="prevDate()">前一天資料</button>
+        <button id="btnNext" class="btn-save" style="display: none;" onclick="nextDate()">後一天資料</button>
         <button class="btn-save" onclick="fetchData()">刷新數據</button>
         <button class="btn-cancel" onclick="closePopup()">關閉視窗</button>
     </div>
@@ -34,11 +36,29 @@
 
 <script>
     let myChart = null;
+    let selectedDate = null; // 日期選擇功能
     function closePopup() { 
         if (window.opener && !window.opener.closed) {
             window.opener.focus(); // 嘗試將焦點切回父視窗
             window.close();
         } 
+    }
+    async function prevDate() {
+        const btnNext = document.getElementById('btnNext');
+        btnNext.style.display = 'block';
+        selectedDate = selectedDate ? new Date(selectedDate.getTime() - 24*60*60*1000) : new Date(Date.now() - 24*60*60*1000);
+        await fetchData();
+    }
+    async function nextDate() {
+        const btnNext = document.getElementById('btnNext');
+        selectedDate = selectedDate ? new Date(selectedDate.getTime() + 24*60*60*1000) : new Date(Date.now() + 24*60*60*1000);
+        ///判斷如果選擇的日期超過今天，則隱藏後一天按鈕
+        const today = new Date();
+        if (selectedDate > today) {
+            btnNext.style.display = 'none';
+            selectedDate = today; // 不允許選擇未來日期
+        }
+        await fetchData();
     }
     // 初始化圖表
     function initChart(labels, tempData, lightData) {
@@ -93,7 +113,12 @@
             }
         });
     }
-
+    function getDateFormat(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
     // 使用 AJAX (Fetch API) 讀取資料
     async function fetchData() {
         const statusEl = document.getElementById('status');
@@ -102,7 +127,16 @@
         statusEl.innerText = "讀取中...";
         // 1. 從網址取得 title 參數
         const urlParams = new URLSearchParams(window.location.search);
-        const customTitle = urlParams.get('title'); // 取得 ?title=xxx
+        const customTitle = urlParams.get('title');
+        let dateStr = "";
+        if(selectedDate === null) {
+            selectedDate = new Date();
+            dateStr = "今日";
+        }
+        else
+        {
+            dateStr = getDateFormat(selectedDate);
+        }
         
         if (customTitle) {
             titleEl.innerText = decodeURIComponent(customTitle);
@@ -110,13 +144,13 @@
     
         const deviceId = urlParams.get('device_id') || 'default_device';
         try {
-            const response = await fetch('/api/chart-data?device_id=' + encodeURIComponent(deviceId)); 
+            const response = await fetch('/api/chart-data?device_id=' + encodeURIComponent(deviceId) + '&date=' + encodeURIComponent(getDateFormat(selectedDate))); 
             if (!response.ok) throw new Error('網路回應不正確 (500 或 404)');
 
             const result = await response.json();
             initChart(result.time, result.temperatures, result.lights);
             
-            statusEl.innerText = "最後更新時間: " + new Date().toLocaleTimeString();
+            statusEl.innerText = "已載入" + dateStr +"資料，最後更新時間: " + new Date().toLocaleTimeString();
         } catch (error) {
             console.error('Fetch 錯誤:', error);
             statusEl.innerText = "讀取失敗: " + error.message;
