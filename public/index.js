@@ -76,15 +76,24 @@ function createDeviceCard(deviceId, device) {
             <div class="stats-grid">
                 <div class="stat-item">
                     <div class="stat-label">最高溫度</div>
-                    <div class="stat-value temp-value">${device.maxTempFullDay ? device.maxTempFullDay + '°C' : '無數據'}</div>
+                    <div class="stat-value temp-value">
+                        ${device.maxTempFullDay ? device.maxTempFullDay + '°C' : '無數據'}
+                        <small class="stat-time">${device.maxTempTime ? formatTime(device.maxTempTime, 'time') : '無數據'}</small>
+                    </div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">最低溫度</div>
-                    <div class="stat-value temp-value">${device.minTempFullDay ? device.minTempFullDay + '°C' : '無數據'}</div>
+                    <div class="stat-value temp-value">
+                        ${device.minTempFullDay ? device.minTempFullDay + '°C' : '無數據'}
+                        <small class="stat-time">${device.minTempTime ? formatTime(device.minTempTime, 'time') : '無數據'}</small>
+                    </div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-label">最高光照</div>
-                    <div class="stat-value light-value">${device.maxlightFullDay >= 0 ? device.maxlightFullDay + ' lux' : '無數據'}</div>
+                    <div class="stat-value light-value">
+                        ${device.maxlightFullDay >= 0 ? device.maxlightFullDay + ' lux' : '無數據'}
+                        <small class="stat-time">${device.maxLightTime ? formatTime(device.maxLightTime, 'time') : '無數據'}</small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -164,17 +173,29 @@ function createDeviceCard(deviceId, device) {
 }
 
 // 格式化時間
-function formatTime(timestamp) {
+function formatTime(timestamp, format = 'date') {
     let date = new Date(new Date(timestamp).getTime() + 8 * 60 * 60 * 1000); // 調整為台北時間
-    return date.toLocaleString('zh-TW', {
-        timeZone: 'Asia/Taipei',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    });
+    if(format === 'time') {
+        return date.toLocaleString('zh-TW', {
+            timeZone: 'Asia/Taipei',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false // 強制啟用 24 小時制
+        });
+
+    }
+    else
+    {
+        return date.toLocaleString('zh-TW', {
+                timeZone: 'Asia/Taipei',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+    }
 }
 
 // 頁面載入時自動載入數據

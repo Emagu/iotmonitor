@@ -5,8 +5,11 @@ export async function updateDailyStatusTask(env) {
             `update device_status set \
             maxTempFullDay=?, \
             minTempFullDay=?, \
-            maxlightFullDay=?`
-        ).bind(20, 30, 0).run();
+            maxlightFullDay=?, \
+            maxTempTime=?, \
+            minTempTime=?, \
+            maxlightTime=?`
+        ).bind(20, 30, 0, null, null, null).run();
     } catch (error) {
         console.error("updateDailyStatusTask error:", error);
     }

@@ -171,10 +171,22 @@ body {
     margin-bottom: 5px;
 }
 
+/* 讓數值欄位變成彈性盒模型，支援上下排列 */
 .stat-value {
+    color: #333;
+    display: flex;
     font-size: 1.2rem;
     font-weight: bold;
-    color: #333;
+    flex-direction: column; /* 時間顯示在數字下方 */
+    align-items: center;    /* 居中對齊 */
+    gap: 4px;              /* 數字與時間的間距 */
+}
+
+/* 時間小字的樣式 */
+.stat-time {
+    font-size: 1rem;     /* 縮小字體 */
+    color: #666;           /* 轉為灰色 */
+    font-weight: normal;   /* 取消粗體 */
 }
 
 .loading {
